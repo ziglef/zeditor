@@ -11,6 +11,17 @@ fn enable_raw_mode() -> () {
     termios::tcsetattr(io::stdin().as_raw_fd(), termios::TCSAFLUSH, &raw).unwrap();
 }
 
+
+// We unwrap here since we should panic if we can't change the terminal flags
+// For now we are just enabling echoing in the terminal but eventually we will also disable raw mode
+fn disable_raw_mode() -> () {
+    let mut raw = termios::Termios::from_fd(io::stdin().as_raw_fd()).unwrap();
+
+    raw.c_lflag |= termios::ECHO;
+
+    termios::tcsetattr(io::stdin().as_raw_fd(), termios::TCSAFLUSH, &raw).unwrap();
+}
+
 fn main() {
     enable_raw_mode();
 
@@ -21,14 +32,16 @@ fn main() {
             Ok(byte_value) => input = char::from(byte_value), 
             Err(err) => {
                 println!("Error parsing bytes from stdin.\nError code: {}", err);
+                disable_raw_mode();
                 exit(-1);
             }
         }
 
         if input == 'q' {
+            disable_raw_mode();
             exit(0);
         }
 
-        println!("{}", input)
+        print!("{}", input)
     }
 }
