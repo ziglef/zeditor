@@ -6,7 +6,7 @@ use std::{io::{self, Read}, process::exit, os::unix::prelude::AsRawFd};
 fn enable_raw_mode() -> () {
     let mut termios = termios::Termios::from_fd(io::stdin().as_raw_fd()).unwrap();
 
-    termios.c_lflag &= !termios::ECHO;
+    termios.c_lflag &= !(termios::ECHO | termios::ICANON);
 
     set_termios(io::stdin().as_raw_fd(), termios);
 }
@@ -22,22 +22,18 @@ fn main() {
     enable_raw_mode();
 
     // Main loop to read user input one byte at a time
-    let mut input: char;
+    let mut input_byte: u8;
+    let mut input_char: char;
     for byte in io::stdin().bytes() {
-        match byte {
-            Ok(byte_value) => input = char::from(byte_value), 
-            Err(err) => {
-                println!("Error parsing bytes from stdin.\nError code: {}", err);
-                set_termios(io::stdin().as_raw_fd(), original_termios);
-                exit(-1);
-            }
-        }
+        input_byte = byte.unwrap();
+        input_char = char::from(input_byte);
 
-        if input == 'q' {
+
+        if input_char == 'q' {
             set_termios(io::stdin().as_raw_fd(), original_termios);
             exit(0);
         }
 
-        print!("{}", input)
+        println!("{:?} -> {}", input_char, input_byte);
     }
 }
