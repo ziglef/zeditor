@@ -12,8 +12,6 @@ fn enable_raw_mode() -> () {
 }
 
 
-// We unwrap here since we should panic if we can't change the terminal flags
-// For now we are just enabling echoing in the terminal but eventually we will also disable raw mode
 fn set_termios(fd: i32, termios: termios::Termios) -> (){
     termios::tcsetattr(fd, termios::TCSAFLUSH, &termios).unwrap();
 }
