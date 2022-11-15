@@ -8,21 +8,19 @@ fn enable_raw_mode() -> () {
 
     raw.c_lflag &= !termios::ECHO;
 
-    termios::tcsetattr(io::stdin().as_raw_fd(), termios::TCSAFLUSH, &raw).unwrap();
+    set_termios(io::stdin().as_raw_fd(), raw);
 }
 
 
 // We unwrap here since we should panic if we can't change the terminal flags
 // For now we are just enabling echoing in the terminal but eventually we will also disable raw mode
-fn disable_raw_mode() -> () {
-    let mut raw = termios::Termios::from_fd(io::stdin().as_raw_fd()).unwrap();
-
-    raw.c_lflag |= termios::ECHO;
-
-    termios::tcsetattr(io::stdin().as_raw_fd(), termios::TCSAFLUSH, &raw).unwrap();
+fn set_termios(fd: i32, termios: termios::Termios) -> (){
+    termios::tcsetattr(fd, termios::TCSAFLUSH, &termios).unwrap();
 }
 
 fn main() {
+    let original_termios = termios::Termios::from_fd(io::stdin().as_raw_fd()).unwrap();
+
     enable_raw_mode();
 
     // Main loop to read user input one byte at a time
@@ -32,13 +30,13 @@ fn main() {
             Ok(byte_value) => input = char::from(byte_value), 
             Err(err) => {
                 println!("Error parsing bytes from stdin.\nError code: {}", err);
-                disable_raw_mode();
+                set_termios(io::stdin().as_raw_fd(), original_termios);
                 exit(-1);
             }
         }
 
         if input == 'q' {
-            disable_raw_mode();
+            set_termios(io::stdin().as_raw_fd(), original_termios);
             exit(0);
         }
 
