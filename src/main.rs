@@ -6,7 +6,11 @@ use std::{io::{self, Read}, process::exit, os::unix::prelude::AsRawFd};
 fn enable_raw_mode() -> () {
     let mut termios = termios::Termios::from_fd(io::stdin().as_raw_fd()).unwrap();
 
-    termios.c_lflag &= !(termios::ECHO | termios::ICANON);
+    // Flags in order:
+    // Disable echoing to the terminal
+    // Disable Canonical Mode (meaning we get input without waiting for a new line)
+    // Disable SIGINT and SIGSTSP
+    termios.c_lflag &= !(termios::ECHO | termios::ICANON | termios::ISIG);
 
     set_termios(io::stdin().as_raw_fd(), termios);
 }
@@ -34,6 +38,10 @@ fn main() {
             exit(0);
         }
 
-        println!("{:?} -> {}", input_char, input_byte);
+        if input_char.is_control() {
+            println!("{}", input_byte);
+        } else {
+            println!("{} -> {}", input_byte, input_char);
+        } 
     }
 }
