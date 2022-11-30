@@ -10,7 +10,20 @@ fn enable_raw_mode() -> () {
     // Disable echoing to the terminal
     // Disable Canonical Mode (meaning we get input without waiting for a new line)
     // Disable SIGINT and SIGSTSP
-    termios.c_lflag &= !(termios::ECHO | termios::ICANON | termios::ISIG);
+    // Disable Ctrl-V behaviour on some systems where it repeats the next character inputed
+    termios.c_lflag &= !(termios::ECHO | termios::ICANON | termios::ISIG | termios::IEXTEN);
+    // Flags in order:
+    // Disable Ctrl+S and Ctrl+Q
+    // Disable Ctrl+M sending a new line
+    termios.c_iflag &= !(termios::IXON | termios::ICRNL);
+    // Flags in order:
+    // Disable automatically translating "\n" to "\r\n"
+    termios.c_oflag &= !(termios::OPOST);
+
+    // Set minimum number of characters for read to be 0
+    // Set max time for read to wait to 100ms
+    termios.c_cc[termios::VMIN] = 0;
+    termios.c_cc[termios::VTIME] = 1;
 
     set_termios(io::stdin().as_raw_fd(), termios);
 }
@@ -28,10 +41,9 @@ fn main() {
     // Main loop to read user input one byte at a time
     let mut input_byte: u8;
     let mut input_char: char;
-    for byte in io::stdin().bytes() {
-        input_byte = byte.unwrap();
+    loop {
+        input_byte = io::stdin().bytes().next().unwrap_or(Ok(0)).unwrap_or(0);
         input_char = char::from(input_byte);
-
 
         if input_char == 'q' {
             set_termios(io::stdin().as_raw_fd(), original_termios);
@@ -39,9 +51,9 @@ fn main() {
         }
 
         if input_char.is_control() {
-            println!("{}", input_byte);
+            println!("{}\r", input_byte);
         } else {
-            println!("{} -> {}", input_byte, input_char);
+            println!("{} -> {}\r", input_byte, input_char);
         } 
     }
 }
